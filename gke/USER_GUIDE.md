@@ -831,6 +831,25 @@ When a Pod is created for a snapshot-enabled `Workspace`, the `POST /mutate-pod`
 > - **VS Code & Other Workspaces (Stateless Pause & Resume)**: For VS Code (`codeserver`) or other workspace kinds, pause and resume is stateless: pausing scales down the Pod to release compute resources, and resuming starts a fresh Pod. All files and custom Conda environments located on the persistent home volume (`/home/jovyan`) are preserved, but in-memory process execution state and live notebook variables are not saved across restarts.
 > - For in-depth technical analysis, gVisor CRIU constraints, and pilot records, see [CODELAB.md](CODELAB.md).
 
+### Step 7.5b: Live Pod Migration Opt-In (`pod-migration.gke.io/enabled`)
+
+When the GKE Pod Migration Controller (`INSTALL_POD_MIGRATION=true` in `deploy_standalone.sh`) is installed on the cluster, a resumable `Workspace` (or `WorkspaceKind`) can opt into **both** UI/CLI Pause/Resume (`spec.paused: true/false`) **and** live node-drain migration (`kubectl drain` / `PodMigrationJob`) by adding the `pod-migration.gke.io/enabled: "true"` annotation:
+
+```yaml
+apiVersion: kubeflow.org/v1beta1
+kind: Workspace
+metadata:
+  name: my-notebook
+  namespace: team-a
+  annotations:
+    podsnapshot.gke.kubeflow.org/enabled: "true"
+    pod-migration.gke.io/enabled: "true"
+```
+
+When `pod-migration.gke.io/enabled: "true"` is set:
+1. **Pod Admission**: `gke-workspace-snapshot-addon` (`POST /mutate-pod`) automatically injects the label `pod-migration.gke.io/enabled: "true"` onto the Workspace `Pod` at creation time (satisfying tenant `ValidatingAdmissionPolicy` rules that disallow user-supplied `podTemplate.podMetadata.labels`).
+2. **Single Namespace Policy Ownership**: `gke-workspace-snapshot-addon` ensures a singleton `PodMigration` CR (`kubeflow-pod-migration`) exists in `${TENANT_NAMESPACE}` pointing at `gs://${SNAPSHOT_GCS_BUCKET}/kubeflow-notebooks` (or reuses an existing `PodMigration` CR in the namespace) and skips creating a duplicate per-Workspace `PodSnapshotPolicy`. Both UI Pause/Resume and live node-drain migrations share the single `PodSnapshotPolicy` (`psp-kubeflow-pod-migration-manual`) managed by `pod-migration-controller`.
+
 ### Step 7.6: Package Management & Persistence Across Restarts
 
 When a workspace Pod restarts, is rescheduled, or resumes from a stateless pause, the ephemeral container root filesystem (`/`) is recreated, while the user home volume (`/home/jovyan` mounted via PVC) is preserved.

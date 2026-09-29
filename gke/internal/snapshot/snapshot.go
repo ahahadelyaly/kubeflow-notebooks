@@ -47,6 +47,7 @@ const (
 	AnnotationCheckpointState     = "podsnapshot.gke.kubeflow.org/checkpoint-state"
 	AnnotationCheckpointStartedAt = "podsnapshot.gke.kubeflow.org/checkpoint-started-at"
 	AnnotationLastCheckpointName  = "podsnapshot.gke.kubeflow.org/last-checkpoint-name"
+	AnnotationPodMigrationEnabled = "pod-migration.gke.io/enabled"
 
 	CheckpointStateCheckpointing = "Checkpointing"
 	CheckpointStateReady         = "Ready"
@@ -69,6 +70,7 @@ const (
 	LabelSnapshotTriggeredBy = "gke-pod-snapshot-triggered-by"
 
 	DefaultStorageConfigName = "kubeflow-pod-snapshot-storage-config"
+	DefaultPodMigrationName  = "kubeflow-pod-migration"
 	IPCConfigMapName         = "jupyter-ipc-config"
 	IPCConfigMapKey          = "jupyter_server_config.py"
 	IPCConfigMapMountPath    = "/etc/jupyter/jupyter_server_config.py"
@@ -97,8 +99,9 @@ const (
 	defaultLeaseNamespace = "kubeflow-workspaces"
 	defaultLeaseName      = "gke-workspace-snapshot-addon"
 
-	podsnapshotGroupVersion = "podsnapshot.gke.io/v1"
-	podWorkspaceIndex       = "workspace"
+	podsnapshotGroupVersion  = "podsnapshot.gke.io/v1"
+	podmigrationGroupVersion = "podmigration.gke.io/v1alpha1"
+	podWorkspaceIndex        = "workspace"
 )
 
 const jupyterIPCServerConfig = `import asyncio
@@ -141,6 +144,11 @@ var (
 		Group:    "podsnapshot.gke.io",
 		Version:  "v1",
 		Resource: "podsnapshots",
+	}
+	podMigrationGVR = schema.GroupVersionResource{
+		Group:    "podmigration.gke.io",
+		Version:  "v1alpha1",
+		Resource: "podmigrations",
 	}
 )
 
